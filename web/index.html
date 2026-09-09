@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UltraTools — веб-демо</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='15' y='35' width='70' height='30' rx='15' fill='%23000'/><rect x='0' y='0' width='100' height='100' rx='24' fill='%2359b8ff' opacity='0.0'/></svg>">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <span class="logo-mark"><i></i></span>
+      UltraTools
+      <span class="ver">1.0</span>
+    </div>
+    <nav class="nav">
+      <button data-tab="island" class="active">Островок</button>
+      <button data-tab="settings">Настройки</button>
+      <button data-tab="about">О приложении</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ===== Макет iPhone ===== -->
+    <section class="phone-pane">
+      <div class="phone">
+        <div class="screen">
+          <div class="statusbar">
+            <div class="sb-left">
+              <span id="sb-time">9:41</span>
+              <span id="sb-carrier">ULTRA NET</span>
+            </div>
+            <div class="sb-right">
+              <span id="sb-fps" class="fps">60 FPS</span>
+              <svg class="wifi" width="15" height="12" viewBox="0 0 16 12" fill="none" aria-hidden="true">
+                <path d="M8 10.6a1.3 1.3 0 1 0 0-2.6 1.3 1.3 0 0 0 0 2.6Z" fill="#fff"/>
+                <path d="M4.6 8.4l1.2 1.2a3.7 3.7 0 0 1 4.4 0l1.2-1.2a6 6 0 0 0-6.8 0Z" fill="#fff"/>
+                <path d="M2 5.7l1.2 1.2a8.4 8.4 0 0 1 9.6 0L14 5.7A11 11 0 0 0 2 5.7Z" fill="#fff"/>
+              </svg>
+              <div class="batt">
+                <span id="sb-batt-pct">87</span>
+                <span class="batt-body"><i id="batt-fill"></i></span>
+                <span class="batt-cap"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="island" id="island"></div>
+
+          <div class="wallpaper" id="wallpaper">
+            <div class="grid">
+              <div class="app" style="--c1:#34c759;--c2:#248a3d">📞</div>
+              <div class="app" style="--c1:#8e8e93;--c2:#636366">📷</div>
+              <div class="app" style="--c1:#fa5f5f;--c2:#d63c3c">🎵</div>
+              <div class="app" style="--c1:#4d63ff;--c2:#3342c4">⏰</div>
+              <div class="app" style="--c1:#59b8ff;--c2:#2f7fd6">✉️</div>
+              <div class="app" style="--c1:#ff8ab5;--c2:#e05c92">🖼️</div>
+              <div class="app" style="--c1:#ff9f43;--c2:#d97b1f">🎮</div>
+              <div class="app" style="--c1:#a06bff;--c2:#7743d6">🎬</div>
+              <div class="app" style="--c1:#2fd4b5;--c2:#1fa389">📅</div>
+              <div class="app" style="--c1:#f8ca4c;--c2:#d8a520">☀️</div>
+              <div class="app" style="--c1:#37d089;--c2:#23a366">🗺️</div>
+              <div class="app" style="--c1:#c98a4b;--c2:#9c6530">📚</div>
+            </div>
+
+            <div class="devbadge" id="devbadge">DEV • 1.0.0</div>
+            <div class="toast" id="toast">⚠️ Низкий заряд батареи</div>
+
+            <div class="dock" id="dock">
+              <div class="app" style="--c1:#34c759;--c2:#248a3d">📞</div>
+              <div class="app" style="--c1:#59b8ff;--c2:#2f7fd6">🧭</div>
+              <div class="app" style="--c1:#4cd964;--c2:#2fa84a">💬</div>
+              <div class="app" style="--c1:#fa5f5f;--c2:#d63c3c">🎵</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="phone-caption">Живой предпросмотр — все переключатели меняют макет мгновенно</p>
+    </section>
+
+    <!-- ===== Панель управления ===== -->
+    <section class="panel">
+      <!-- Островок -->
+      <div class="tab active" id="tab-island">
+        <div class="card">
+          <h2>Конструктор островка</h2>
+          <label class="field">
+            <span>Название</span>
+            <input id="island-name" type="text" maxlength="24" placeholder="Мой островок">
+          </label>
+
+          <div class="control">
+            <span class="control-label">Форма</span>
+            <div class="chips" id="shape-chips"></div>
+          </div>
+
+          <div class="control">
+            <span class="control-label">Содержимое</span>
+            <div class="chips" id="content-chips"></div>
+          </div>
+
+          <div class="control">
+            <span class="control-label">Цвет</span>
+            <div class="swatches" id="swatches"></div>
+          </div>
+
+          <label class="toggle-row"><span>Градиент <small>плавный переход между двумя цветами</small></span>
+            <span class="switch"><input id="tg-gradient" type="checkbox"><i></i></span>
+          </label>
+          <label class="toggle-row"><span>Пульсация <small>островок мягко «дышит»</small></span>
+            <span class="switch"><input id="tg-pulse" type="checkbox"><i></i></span>
+          </label>
+
+          <div class="control">
+            <span class="control-label">Размер <b id="scale-value">100%</b></span>
+            <input id="scale" type="range" min="0.8" max="1.3" step="0.05">
+          </div>
+
+          <button class="primary" id="save-preset">＋ Сохранить пресет</button>
+        </div>
+
+        <div class="card">
+          <h2>Мои пресеты</h2>
+          <div id="preset-list"></div>
+        </div>
+
+        <div class="card">
+          <h2>Экспорт</h2>
+          <p class="muted">Островок сохранится как PNG (форма, цвет, содержимое).</p>
+          <button class="primary" id="export-png">⬇ Скачать PNG</button>
+        </div>
+      </div>
+
+      <!-- Настройки -->
+      <div class="tab" id="tab-settings">
+        <div class="card">
+          <h2>Скрытые настройки</h2>
+          <p class="muted">Имитация скрытых функций iOS — влияет на живой макет слева.</p>
+        </div>
+        <div id="settings-list"></div>
+        <button class="ghost" id="reset-settings">Сбросить все настройки</button>
+      </div>
+
+      <!-- О приложении -->
+      <div class="tab" id="tab-about">
+        <div class="card about-card">
+          <div class="about-logo"><i></i></div>
+          <h1>UltraTools</h1>
+          <p class="verline">Версия 1.0.0 (1) • iOS 16+ • SwiftUI</p>
+        </div>
+        <div class="card">
+          <h2>Возможности</h2>
+          <ul class="features">
+            <li><b>Конструктор островка</b> — форма, цвет, градиент, пульсация, содержимое</li>
+            <li><b>Живой предпросмотр</b> — на макете iPhone с настоящим статус-баром</li>
+            <li><b>14 скрытых настроек</b> — в духе iOS-модов, с тактильными откликами</li>
+            <li><b>Пресеты и экспорт PNG</b> — сохраняйте и делитесь своим островком</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h2>Как получить .ipa</h2>
+          <p>Нативное SwiftUI-приложение лежит в корне репозитория. На macOS с Xcode 15+ выполните:</p>
+          <pre>./build_ipa.sh</pre>
+          <p>Готовый <code>build/UltraTools.ipa</code> установите через AltStore, Sideloadly или TestFlight. Подробности — в <code>README.md</code>.</p>
+        </div>
+        <div class="card warn">
+          <h2>⚠️ Важно</h2>
+          <p>Настройки имитируют скрытые функции iOS и влияют только на предпросмотр в приложении. Реальные системные настройки без джейлбрейка изменить невозможно, а настоящий Dynamic Island живёт на системном уровне. UltraTools — инструмент для дизайна и демонстрации.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    UltraTools • веб-демо интерфейса • нативное приложение (SwiftUI) — в корне репозитория
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
