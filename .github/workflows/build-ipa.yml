@@ -1,0 +1,156 @@
+name: Build UltraTools IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      # Lets feature/automation branches produce a verifiable IPA artifact
+      # before they are merged into main.
+      - "arena/**"
+
+permissions:
+  # write is needed only for the "Publish diagnostics on failure" step,
+  # which commits BUILD_DIAGNOSTICS.md back to the branch with [skip ci].
+  contents: write
+
+jobs:
+  build-ipa:
+    name: Build, package and upload UltraTools.ipa
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          xcodebuild -showsdks | sed -n '1,20p'
+
+      - name: Install XcodeGen
+        run: |
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+          xcodegen --version
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build app (Release, iphoneos, unsigned)
+        run: |
+          set +e
+          xcodebuild \
+            -project UltraTools.xcodeproj \
+            -scheme UltraTools \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath build \
+            -destination "generic/platform=iOS" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build > xcodebuild.log 2>&1
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            echo "::group::xcodebuild errors"
+            grep -E "error:" xcodebuild.log | head -n 30
+            echo "::endgroup::"
+            grep -E "error:" xcodebuild.log | head -n 15 | while IFS= read -r line; do
+              echo "::error::${line}"
+            done
+            exit "$status"
+          fi
+          tail -n 5 xcodebuild.log
+
+      - name: Package UltraTools.ipa
+        run: |
+          APP="build/Build/Products/Release-iphoneos/UltraTools.app"
+          test -d "$APP" || { echo "::error::UltraTools.app not found under Release-iphoneos"; ls -R build/Build/Products; exit 1; }
+          rm -rf Payload UltraTools.ipa
+          mkdir Payload
+          cp -R "$APP" Payload/
+          zip -r -y UltraTools.ipa Payload
+
+      - name: Verify UltraTools.ipa
+        run: |
+          test -f UltraTools.ipa
+          unzip -l UltraTools.ipa > ipa_listing.txt
+          cat ipa_listing.txt
+          grep -q "Payload/UltraTools.app/" ipa_listing.txt || { echo "::error::IPA does not contain Payload/UltraTools.app/"; exit 1; }
+          ls -lh UltraTools.ipa
+          shasum -a 256 UltraTools.ipa
+          codesign -dv "Payload/UltraTools.app" 2>&1 || echo "INFO: app bundle is not signed (expected for an unsigned IPA)"
+
+      - name: Upload UltraTools-IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: UltraTools-IPA
+          path: UltraTools.ipa
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish UltraTools.ipa to the repository
+        run: |
+          git config user.name "ultratools-ci"
+          git config user.email "ultratools-ci@users.noreply.github.com"
+          git add -f UltraTools.ipa
+          if git diff --cached --quiet; then
+            echo "UltraTools.ipa unchanged — nothing to commit"
+          else
+            git commit -m "ci: publish unsigned UltraTools.ipa [skip ci]"
+            git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${GITHUB_REF_NAME}"
+          fi
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: UltraTools-build-logs
+          path: xcodebuild.log
+          if-no-files-found: ignore
+
+      - name: Publish diagnostics on failure
+        if: failure()
+        run: |
+          {
+            echo "# Build diagnostics"
+            echo
+            echo "Run ${GITHUB_RUN_ID} · commit ${GITHUB_SHA}"
+            echo
+            echo '```'
+            grep -nE "error:|The following build commands failed" xcodebuild.log | head -n 40
+            echo "--- tail ---"
+            tail -n 100 xcodebuild.log
+            echo '```'
+          } > BUILD_DIAGNOSTICS.md
+          git config user.name "ultratools-ci"
+          git config user.email "ultratools-ci@users.noreply.github.com"
+          git add BUILD_DIAGNOSTICS.md
+          git commit -m "ci: publish build diagnostics [skip ci]"
+          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${GITHUB_REF_NAME}"
+
+      - name: Summarize build
+        if: always()
+        run: |
+          {
+            echo "## UltraTools IPA build"
+            echo
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            if [ -f UltraTools.ipa ]; then
+              sha=$(shasum -a 256 UltraTools.ipa | awk '{print $1}') || sha="unknown"
+              echo "- UltraTools.ipa: present"
+              echo "- SHA-256: \`${sha}\`"
+              echo
+              echo '```'
+              sed -n '1,25p' ipa_listing.txt 2>/dev/null || unzip -l UltraTools.ipa | sed -n '1,25p'
+              echo '```'
+            else
+              echo "- UltraTools.ipa: NOT PRODUCED"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          true
