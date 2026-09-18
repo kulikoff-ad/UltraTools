@@ -1,0 +1,19 @@
+# macOS
+.DS_Store
+
+# Xcode / XcodeGen generated project (regenerate with `xcodegen generate`)
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+*.dSYM.zip
+
+# Local build output
+build/
+Payload/
+*.ipa
+*.xcarchive
+
+# SwiftPM
+.swiftpm/
+Packages/

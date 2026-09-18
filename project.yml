@@ -1,0 +1,57 @@
+name: UltraTools
+
+options:
+  bundleIdPrefix: com.kulikoffad
+  createIntermediateGroups: true
+  deploymentTarget:
+    iOS: "15.0"
+  groupSortPosition: top
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "15.0"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    # Unsigned device build by default; CI passes the same flags to xcodebuild.
+    CODE_SIGNING_ALLOWED: false
+    CODE_SIGNING_REQUIRED: false
+    CODE_SIGN_IDENTITY: ""
+    CODE_SIGN_STYLE: Manual
+
+targets:
+  UltraTools:
+    type: application
+    platform: iOS
+    sources:
+      - path: UltraTools
+        excludes:
+          # Handled via INFOPLIST_FILE below, never copied as a resource.
+          - "Info.plist"
+    settings:
+      base:
+        PRODUCT_NAME: UltraTools
+        PRODUCT_BUNDLE_IDENTIFIER: com.kulikoffad.UltraTools
+        INFOPLIST_FILE: UltraTools/Info.plist
+        GENERATE_INFOPLIST_FILE: false
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ENABLE_PREVIEWS: true
+        SWIFT_EMIT_LOC_STRINGS: true
+
+schemes:
+  UltraTools:
+    build:
+      targets:
+        UltraTools: all
+    run:
+      config: Release
+    test:
+      config: Release
+    profile:
+      config: Release
+    analyze:
+      config: Release
+    archive:
+      config: Release

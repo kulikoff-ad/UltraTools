@@ -1,0 +1,95 @@
+name: Build UltraTools IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      # Lets feature/automation branches produce a verifiable IPA artifact
+      # before they are merged into main.
+      - "arena/**"
+
+permissions:
+  contents: read
+
+jobs:
+  build-ipa:
+    name: Build, package and upload UltraTools.ipa
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          xcodebuild -showsdks | sed -n '1,20p'
+
+      - name: Install XcodeGen
+        run: |
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+          xcodegen --version
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build app (Release, iphoneos, unsigned)
+        run: |
+          xcodebuild \
+            -project UltraTools.xcodeproj \
+            -scheme UltraTools \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath build \
+            -destination "generic/platform=iOS" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Package UltraTools.ipa
+        run: |
+          APP="build/Build/Products/Release-iphoneos/UltraTools.app"
+          test -d "$APP" || { echo "::error::UltraTools.app not found under Release-iphoneos"; ls -R build/Build/Products; exit 1; }
+          rm -rf Payload UltraTools.ipa
+          mkdir Payload
+          cp -R "$APP" Payload/
+          zip -r -y UltraTools.ipa Payload
+
+      - name: Verify UltraTools.ipa
+        run: |
+          test -f UltraTools.ipa
+          unzip -l UltraTools.ipa
+          unzip -l UltraTools.ipa | grep -q "Payload/UltraTools.app/" || { echo "::error::IPA does not contain Payload/UltraTools.app/"; exit 1; }
+          ls -lh UltraTools.ipa
+          shasum -a 256 UltraTools.ipa
+          codesign -dv "Payload/UltraTools.app" 2>&1 || echo "INFO: app bundle is not signed (expected for an unsigned IPA)"
+
+      - name: Upload UltraTools-IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: UltraTools-IPA
+          path: UltraTools.ipa
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Summarize build
+        if: always()
+        run: |
+          {
+            echo "## UltraTools IPA build"
+            echo
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            if [ -f UltraTools.ipa ]; then
+              echo "- UltraTools.ipa: present"
+              echo "- SHA-256: \`${shasum -a 256 UltraTools.ipa | cut -d' ' -f1}\`"
+              unzip -l UltraTools.ipa | head -20
+            else
+              echo "- UltraTools.ipa: **NOT PRODUCED**"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
