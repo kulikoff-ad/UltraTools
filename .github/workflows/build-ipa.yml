@@ -10,7 +10,9 @@ on:
       - "arena/**"
 
 permissions:
-  contents: read
+  # write is needed only for the "Publish diagnostics on failure" step,
+  # which commits BUILD_DIAGNOSTICS.md back to the branch with [skip ci].
+  contents: write
 
 jobs:
   build-ipa:
@@ -40,6 +42,7 @@ jobs:
 
       - name: Build app (Release, iphoneos, unsigned)
         run: |
+          set +e
           xcodebuild \
             -project UltraTools.xcodeproj \
             -scheme UltraTools \
@@ -50,7 +53,19 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            build
+            build > xcodebuild.log 2>&1
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            echo "::group::xcodebuild errors"
+            grep -E "error:" xcodebuild.log | head -n 30
+            echo "::endgroup::"
+            grep -E "error:" xcodebuild.log | head -n 15 | while IFS= read -r line; do
+              echo "::error::${line}"
+            done
+            exit "$status"
+          fi
+          tail -n 5 xcodebuild.log
 
       - name: Package UltraTools.ipa
         run: |
@@ -77,6 +92,34 @@ jobs:
           path: UltraTools.ipa
           if-no-files-found: error
           retention-days: 30
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: UltraTools-build-logs
+          path: xcodebuild.log
+          if-no-files-found: ignore
+
+      - name: Publish diagnostics on failure
+        if: failure()
+        run: |
+          {
+            echo "# Build diagnostics"
+            echo
+            echo "Run ${GITHUB_RUN_ID} · commit ${GITHUB_SHA}"
+            echo
+            echo '```'
+            grep -nE "error:|The following build commands failed" xcodebuild.log | head -n 40
+            echo "--- tail ---"
+            tail -n 100 xcodebuild.log
+            echo '```'
+          } > BUILD_DIAGNOSTICS.md
+          git config user.name "ultratools-ci"
+          git config user.email "ultratools-ci@users.noreply.github.com"
+          git add BUILD_DIAGNOSTICS.md
+          git commit -m "ci: publish build diagnostics [skip ci]"
+          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${GITHUB_REF_NAME}"
 
       - name: Summarize build
         if: always()
