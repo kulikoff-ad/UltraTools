@@ -191,16 +191,21 @@ struct JSONFormatterView: View {
 
 enum JSONFormatter {
 
-    struct Result {
+    struct Output {
         let text: String
         let summary: String
+    }
+
+    enum Outcome {
+        case success(Output)
+        case failure(String)
     }
 
     /// Parses `source` and re-serialises it either pretty-printed or minified.
     static func serialize(_ source: String,
                           pretty: Bool,
                           indent: Int,
-                          sortKeys: Bool) -> Swift.Result<Result, String> {
+                          sortKeys: Bool) -> Outcome {
         let trimmed = source.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             return .failure("Nothing to process — paste some JSON first.")
@@ -242,7 +247,7 @@ enum JSONFormatter {
         }
 
         let lines = text.split(separator: "\n", omittingEmptySubsequences: false).count
-        return .success(Result(text: text,
+        return .success(Output(text: text,
                                summary: "\(typeName(of: object)) · \(text.count) chars · \(lines) lines"))
     }
 
