@@ -79,8 +79,9 @@ jobs:
       - name: Verify UltraTools.ipa
         run: |
           test -f UltraTools.ipa
-          unzip -l UltraTools.ipa
-          unzip -l UltraTools.ipa | grep -q "Payload/UltraTools.app/" || { echo "::error::IPA does not contain Payload/UltraTools.app/"; exit 1; }
+          unzip -l UltraTools.ipa > ipa_listing.txt
+          cat ipa_listing.txt
+          grep -q "Payload/UltraTools.app/" ipa_listing.txt || { echo "::error::IPA does not contain Payload/UltraTools.app/"; exit 1; }
           ls -lh UltraTools.ipa
           shasum -a 256 UltraTools.ipa
           codesign -dv "Payload/UltraTools.app" 2>&1 || echo "INFO: app bundle is not signed (expected for an unsigned IPA)"
@@ -129,10 +130,15 @@ jobs:
             echo
             echo "- Commit: \`${GITHUB_SHA}\`"
             if [ -f UltraTools.ipa ]; then
+              sha=$(shasum -a 256 UltraTools.ipa | awk '{print $1}') || sha="unknown"
               echo "- UltraTools.ipa: present"
-              echo "- SHA-256: \`${shasum -a 256 UltraTools.ipa | cut -d' ' -f1}\`"
-              unzip -l UltraTools.ipa | head -20
+              echo "- SHA-256: \`${sha}\`"
+              echo
+              echo '```'
+              sed -n '1,25p' ipa_listing.txt 2>/dev/null || unzip -l UltraTools.ipa | sed -n '1,25p'
+              echo '```'
             else
-              echo "- UltraTools.ipa: **NOT PRODUCED**"
+              echo "- UltraTools.ipa: NOT PRODUCED"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
+          true
